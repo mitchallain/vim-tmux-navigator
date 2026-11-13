@@ -31,8 +31,7 @@ bind_key_vim() {
 
   vim_pattern="$(get_tmux_option "@vim_navigator_pattern" "${vim_pattern}")"
 
-  is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
-      | grep -iqE '^[^TXZ ]+ +"@vim_navigator_pattern"$'"
+  is_vim='#{||:#{==:#{@is_vim},1},#{m/ri:^@vim_navigator_pattern$,#{pane_current_command}}}'
   is_vim="$(get_tmux_option "@vim_navigator_check" "${is_vim}")"
   is_vim="${is_vim//@vim_navigator_pattern/${vim_pattern}}"
 
@@ -42,7 +41,11 @@ bind_key_vim() {
   fi
 
   # sending C-/ according to https://github.com/tmux/tmux/issues/1827
-  tmux bind-key -n "$key" if-shell "$is_vim" "send-keys '$key'" "$tmux_cmd"
+  if [[ "$is_vim" == '#{'* ]]; then
+    tmux bind-key -n "$key" if-shell -F "$is_vim" "send-keys '$key'" "$tmux_cmd"
+  else
+    tmux bind-key -n "$key" if-shell "$is_vim" "send-keys '$key'" "$tmux_cmd"
+  fi
   # tmux < 3.0 cannot parse "$tmux_cmd" as one argument, thus copying as multiple arguments
   tmux bind-key -T copy-mode-vi "$key" $tmux_cmd
 }
@@ -52,7 +55,7 @@ main() {
   move_right="$(get_tmux_option "@vim_navigator_mapping_right" 'C-l')"
   move_up="$(get_tmux_option "@vim_navigator_mapping_up" 'C-k')"
   move_down="$(get_tmux_option "@vim_navigator_mapping_down" 'C-j')"
-  move_prev="$(get_tmux_option "@vim_navigator_mapping_prev" 'C-\')"
+  move_prev="$(get_tmux_option "@vim_navigator_mapping_prev" '')"
 
   for k in $(echo "$move_left");  do bind_key_vim "$k" "select-pane -L"; done
   for k in $(echo "$move_down");  do bind_key_vim "$k" "select-pane -D"; done
